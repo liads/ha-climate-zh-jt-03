@@ -1,6 +1,6 @@
 # GitHub Codespaces Development Guide
 
-Integration blueprint is fully compatible with GitHub Codespaces for cloud-based development.
+Climate for IR Devices using ZH/JT-03 Remote is fully compatible with GitHub Codespaces for cloud-based development.
 
 ## Quick Start
 
