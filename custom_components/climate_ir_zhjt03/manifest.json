@@ -5,9 +5,12 @@
     "@liads"
   ],
   "config_flow": true,
+  "dependencies": [
+    "infrared"
+  ],
   "documentation": "https://github.com/liads/ha-climate-zh-jt-03",
-  "integration_type": "hub",
-  "iot_class": "cloud_polling",
+  "integration_type": "device",
+  "iot_class": "assumed_state",
   "issue_tracker": "https://github.com/liads/ha-climate-zh-jt-03/issues",
   "version": "0.1.0"
 }

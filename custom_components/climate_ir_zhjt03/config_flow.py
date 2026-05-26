@@ -1,9 +1,4 @@
-"""
-Config flow for climate_ir_zhjt03.
-
-This module provides backwards compatibility for hassfest.
-The actual implementation is in the config_flow_handler package.
-"""
+"""Config flow for Climate for IR Devices using ZH/JT-03 Remote."""
 
 from __future__ import annotations
 

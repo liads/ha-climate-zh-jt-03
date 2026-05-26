@@ -1,245 +1,116 @@
-"""
-Config flow for climate_ir_zhjt03.
-
-This module implements the main configuration flow including:
-- Initial user setup
-- Reconfiguration of existing entries
-- Reauthentication flow
-
-For more information:
-https://developers.home-assistant.io/docs/config_entries_config_flow_handler
-"""
+"""Config flow for Climate for IR Devices using ZH/JT-03 Remote."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from slugify import slugify
+import voluptuous as vol
 
-from custom_components.climate_ir_zhjt03.config_flow_handler.schemas import (
-    get_reauth_schema,
-    get_reconfigure_schema,
-    get_user_schema,
+from custom_components.climate_ir_zhjt03.const import (
+    CONF_HUMIDITY_SENSOR,
+    CONF_INFRARED_ENTITY_ID,
+    CONF_POWER_SENSOR,
+    CONF_TEMPERATURE_SENSOR,
+    DEFAULT_NAME,
+    DOMAIN,
 )
-from custom_components.climate_ir_zhjt03.config_flow_handler.validators import validate_credentials
-from custom_components.climate_ir_zhjt03.const import DOMAIN, LOGGER
-from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.loader import async_get_loaded_integration
-
-if TYPE_CHECKING:
-    from custom_components.climate_ir_zhjt03.config_flow_handler.options_flow import ClimateZHJT03OptionsFlow
-
-# Map exception types to error keys for user-facing messages
-ERROR_MAP = {
-    "ClimateZHJT03ApiClientAuthenticationError": "auth",
-    "ClimateZHJT03ApiClientCommunicationError": "connection",
-}
+from homeassistant.components import infrared
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.const import CONF_NAME
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig, TextSelector
 
 
-class ClimateZHJT03ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """
-    Handle a config flow for climate_ir_zhjt03.
-
-    This class manages the configuration flow for the integration, including
-    initial setup, reconfiguration, and reauthentication.
-
-    Supported flows:
-    - user: Initial setup via UI
-    - reconfigure: Update existing configuration
-    - reauth: Handle expired credentials
-
-    For more details:
-    https://developers.home-assistant.io/docs/config_entries_config_flow_handler
-    """
+class ClimateZHJT03ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Climate for IR Devices using ZH/JT-03 Remote."""
 
     VERSION = 1
-
-    @staticmethod
-    def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
-    ) -> ClimateZHJT03OptionsFlow:
-        """
-        Get the options flow for this handler.
-
-        Returns:
-            The options flow instance for modifying integration options.
-
-        """
-        from custom_components.climate_ir_zhjt03.config_flow_handler.options_flow import (  # noqa: PLC0415
-            ClimateZHJT03OptionsFlow,
-        )
-
-        return ClimateZHJT03OptionsFlow()
 
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """
-        Handle a flow initialized by the user.
+    ) -> ConfigFlowResult:
+        """Handle the initial setup step."""
+        emitter_entity_ids = infrared.async_get_emitters(self.hass)
+        if not emitter_entity_ids:
+            return self.async_abort(reason="no_emitters")
 
-        This is the entry point when a user adds the integration from the UI.
-
-        Args:
-            user_input: The user input from the config flow form, or None for initial display.
-
-        Returns:
-            The config flow result, either showing a form or creating an entry.
-
-        """
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            try:
-                await validate_credentials(
-                    self.hass,
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                )
-            except Exception as exception:  # noqa: BLE001
-                errors["base"] = self._map_exception_to_error(exception)
+            name = user_input[CONF_NAME].strip()
+            if not name:
+                errors[CONF_NAME] = "name_required"
             else:
-                # Set unique ID based on username
-                # NOTE: This is just an example - use a proper unique ID in production
-                # See: https://developers.home-assistant.io/docs/config_entries_config_flow_handler#unique-ids
-                await self.async_set_unique_id(slugify(user_input[CONF_USERNAME]))
+                emitter_entity_id = user_input[CONF_INFRARED_ENTITY_ID]
+                await self.async_set_unique_id(
+                    _unique_id_for_emitter(self.hass, emitter_entity_id),
+                )
                 self._abort_if_unique_id_configured()
 
-                return self.async_create_entry(
-                    title=user_input[CONF_USERNAME],
-                    data=user_input,
+                data = {
+                    CONF_NAME: name,
+                    CONF_INFRARED_ENTITY_ID: emitter_entity_id,
+                }
+                data.update(
+                    {key: value for key, value in user_input.items() if key not in data and value},
                 )
 
-        integration = async_get_loaded_integration(self.hass, DOMAIN)
-        assert integration.documentation is not None, "Integration documentation URL is not set in manifest.json"
+                return self.async_create_entry(
+                    title=name,
+                    data=data,
+                )
 
         return self.async_show_form(
             step_id="user",
-            data_schema=get_user_schema(user_input),
-            errors=errors,
-            description_placeholders={
-                "documentation_url": integration.documentation,
-            },
-        )
-
-    async def async_step_reconfigure(
-        self,
-        user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """
-        Handle reconfiguration of the integration.
-
-        Allows users to update their credentials without removing and re-adding
-        the integration.
-
-        Args:
-            user_input: The user input from the reconfigure form, or None for initial display.
-
-        Returns:
-            The config flow result, either showing a form or updating the entry.
-
-        """
-        entry = self._get_reconfigure_entry()
-        errors: dict[str, str] = {}
-
-        if user_input is not None:
-            try:
-                await validate_credentials(
-                    self.hass,
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                )
-            except Exception as exception:  # noqa: BLE001
-                errors["base"] = self._map_exception_to_error(exception)
-            else:
-                return self.async_update_reload_and_abort(
-                    entry,
-                    data=user_input,
-                )
-
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=get_reconfigure_schema(entry.data.get(CONF_USERNAME, "")),
+            data_schema=_user_schema(emitter_entity_ids),
             errors=errors,
         )
 
-    async def async_step_reauth(
-        self,
-        entry_data: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """
-        Handle reauthentication when credentials are invalid.
 
-        This flow is automatically triggered when the coordinator catches
-        an authentication error (ConfigEntryAuthFailed).
+def _user_schema(emitter_entity_ids: list[str]) -> vol.Schema:
+    """Return the user step schema."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_NAME, default=DEFAULT_NAME): TextSelector(),
+            vol.Required(CONF_INFRARED_ENTITY_ID): EntitySelector(
+                EntitySelectorConfig(
+                    domain=infrared.DOMAIN,
+                    include_entities=emitter_entity_ids,
+                ),
+            ),
+            vol.Optional(CONF_TEMPERATURE_SENSOR): EntitySelector(
+                EntitySelectorConfig(
+                    filter={
+                        "domain": "sensor",
+                        "device_class": SensorDeviceClass.TEMPERATURE,
+                    },
+                ),
+            ),
+            vol.Optional(CONF_HUMIDITY_SENSOR): EntitySelector(
+                EntitySelectorConfig(
+                    filter={
+                        "domain": "sensor",
+                        "device_class": SensorDeviceClass.HUMIDITY,
+                    },
+                ),
+            ),
+            vol.Optional(CONF_POWER_SENSOR): EntitySelector(
+                EntitySelectorConfig(domain="binary_sensor"),
+            ),
+        },
+    )
 
-        Args:
-            entry_data: The existing entry data (unused, per convention).
 
-        Returns:
-            The result of the reauth_confirm step.
+def _unique_id_for_emitter(hass: Any, emitter_entity_id: str) -> str:
+    """Return a stable unique ID for an emitter-backed ZH/JT-03 climate entity."""
+    ent_reg = er.async_get(hass)
+    entry = ent_reg.async_get(emitter_entity_id)
+    if entry is not None and entry.unique_id is not None:
+        return f"zh_jt_03_{entry.platform}_{entry.unique_id}"
 
-        """
-        return await self.async_step_reauth_confirm()
-
-    async def async_step_reauth_confirm(
-        self,
-        user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
-        """
-        Handle reauthentication confirmation.
-
-        Shows the reauthentication form and processes updated credentials.
-
-        Args:
-            user_input: The user input with updated credentials, or None for initial display.
-
-        Returns:
-            The config flow result, either showing a form or updating the entry.
-
-        """
-        entry = self._get_reauth_entry()
-        errors: dict[str, str] = {}
-
-        if user_input is not None:
-            try:
-                await validate_credentials(
-                    self.hass,
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                )
-            except Exception as exception:  # noqa: BLE001
-                errors["base"] = self._map_exception_to_error(exception)
-            else:
-                return self.async_update_reload_and_abort(
-                    entry,
-                    data={**entry.data, **user_input},
-                )
-
-        return self.async_show_form(
-            step_id="reauth_confirm",
-            data_schema=get_reauth_schema(entry.data.get(CONF_USERNAME, "")),
-            errors=errors,
-            description_placeholders={
-                "username": entry.data.get(CONF_USERNAME, ""),
-            },
-        )
-
-    def _map_exception_to_error(self, exception: Exception) -> str:
-        """
-        Map API exceptions to user-facing error keys.
-
-        Args:
-            exception: The exception that was raised.
-
-        Returns:
-            The error key for display in the config flow form.
-
-        """
-        LOGGER.warning("Error in config flow: %s", exception)
-        exception_name = type(exception).__name__
-        return ERROR_MAP.get(exception_name, "unknown")
+    return f"zh_jt_03_{emitter_entity_id}"
 
 
 __all__ = ["ClimateZHJT03ConfigFlowHandler"]

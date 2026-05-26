@@ -274,6 +274,8 @@ split-on-trailing-comma = false
 ]
 "tests/*" = [
     "S101",    # assert is fine in tests
+    "SLF001",  # Private member access is fine in focused entity tests
+    "TID251",  # Shared test helpers are fine in tests
     "PLR2004", # Magic values are fine in tests
     "D",       # Docstrings not required in tests
     "PTH",     # Use pathlib - temporary exemption for tests
