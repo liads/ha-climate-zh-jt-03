@@ -174,6 +174,7 @@ def test_apply_state_sends_command_and_updates_assumed_state(climate) -> None:
 
     command = entity._async_send_ir_command.await_args.args[0]
     assert command.state.hvac_mode == climate.HVACMode.COOL
+    assert all(isinstance(timing, int) for timing in command.get_raw_timings())
     assert entity._attr_hvac_mode == climate.HVACMode.COOL
     assert entity._last_on_operation == climate.HVACMode.COOL
     assert entity.write_count == 1
