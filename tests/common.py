@@ -54,6 +54,10 @@ class HomeAssistantError(Exception):
     """Tiny Home Assistant error stub."""
 
 
+class State(SimpleNamespace):
+    """Tiny Home Assistant state stub."""
+
+
 class ClimateEntity:
     """Tiny climate entity stub."""
 
@@ -252,7 +256,9 @@ def install_homeassistant_stubs(monkeypatch) -> None:
 
     core = types.ModuleType("homeassistant.core")
     core.Event = object
+    core.EventStateChangedData = dict
     core.HomeAssistant = object
+    core.State = State
     core.callback = lambda func: func
 
     infrared = types.ModuleType("homeassistant.components.infrared")
