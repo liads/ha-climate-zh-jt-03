@@ -7,265 +7,124 @@
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
 
-<!--
-Uncomment and customize these badges if you want to use them:
+Home Assistant custom integration that exposes an air conditioner controlled by a ZH/JT-03 infrared remote as a
+`climate` entity. It sends raw IR commands through Home Assistant's `infrared` integration and keeps an assumed state
+inside Home Assistant.
 
-[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
-[![Discord][discord-shield]][discord]
--->
+## Features
 
-**✨ Develop in the cloud:** Want to contribute or customize this integration? Open it directly in GitHub Codespaces - no local setup required!
+- UI setup through Home Assistant's config flow.
+- One climate entity per configured infrared transmitter.
+- ZH/JT-03 command encoding for Chigo-compatible AC units.
+- HVAC modes: off, auto, cool, heat, fan only, and dry.
+- Target temperature range: 16-32 C in whole-degree steps.
+- Fan modes: auto, low, medium, and high.
+- Swing modes: off, fast, and slow.
+- Optional temperature and humidity sensors for current readings.
+- Optional binary power sensor to reconcile the assumed HVAC state.
+- State restoration after Home Assistant restarts.
+- Redacted diagnostics for config-entry troubleshooting.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/liads/ha-climate-zh-jt-03?quickstart=1)
+## Requirements
 
-## ✨ Features
+- Home Assistant 2026.4.0 or newer.
+- HACS 2.0.5 or newer for the recommended installation path.
+- A configured Home Assistant `infrared` transmitter entity.
+- An AC unit that responds to the ZH/JT-03 IR protocol.
 
-- **Easy Setup**: Simple configuration through the UI - no YAML required
-- **Air Quality Monitoring**: Track AQI and PM2.5 levels in real-time
-- **Filter Management**: Monitor filter life and get replacement alerts
-- **Smart Control**: Adjust fan speed, target humidity, and operating modes
-- **Child Lock**: Safety feature to prevent accidental changes
-- **Diagnostic Info**: View filter life, runtime hours, and device statistics
-- **Reconfigurable**: Change credentials anytime without removing the integration
-- **Options Flow**: Adjust settings like update interval after setup
-- **Custom Services**: Advanced control with built-in service calls
+This integration is `assumed_state`: most IR remotes do not receive feedback from the AC. Home Assistant assumes the
+last command succeeded unless you provide optional feedback sensors.
 
-**This integration will set up the following platforms.**
+## Installation
 
-| Platform        | Description                                              |
-| --------------- | -------------------------------------------------------- |
-| `sensor`        | Air quality index (AQI), PM2.5, filter life, and runtime |
-| `binary_sensor` | API connection status and filter replacement alert       |
-| `switch`        | Child lock and LED display controls                      |
-| `select`        | Fan speed selection (Low/Medium/High/Auto)               |
-| `number`        | Target humidity setting (30-80%)                         |
-| `button`        | Reset filter timer after replacement                     |
-| `fan`           | Air purifier fan control with speed settings             |
+### HACS
 
-> [!TIP]
-> **Interactive Demo:** The entities are interconnected for demonstration.
-> Press the **Reset Filter Timer** button to see **Filter Life Remaining** update to 100%.
-> Changing the **Air Purifier** fan speed syncs the **Fan Speed** select, and vice versa.
+1. Open HACS in Home Assistant.
+2. Go to **Integrations**.
+3. Open the three-dot menu and choose **Custom repositories**.
+4. Add `https://github.com/liads/ha-climate-zh-jt-03` as an **Integration** repository.
+5. Download **Climate for IR Devices using ZH/JT-03 Remote**.
+6. Restart Home Assistant.
 
-## 🚀 Quick Start
-
-### Step 1: Install the Integration
-
-**Prerequisites:** This integration requires [HACS](https://hacs.xyz/) (Home Assistant Community Store) to be installed.
-
-Click the button below to open the integration directly in HACS:
+You can also open the repository directly in HACS:
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=liads&repository=ha-climate-zh-jt-03&category=integration)
 
-Then:
+### Manual
 
-1. Click "Download" to install the integration
-2. **Restart Home Assistant** (required after installation)
+1. Download the latest release from the [releases page][releases].
+2. Copy `custom_components/climate_ir_zhjt03/` into your Home Assistant `custom_components/` directory.
+3. Restart Home Assistant.
 
-> [!NOTE]
-> The My Home Assistant redirect will first take you to a landing page. Click the button there to open your Home Assistant instance.
+## Setup
 
-<details>
-<summary><strong>Manual Installation (Advanced)</strong></summary>
+Before adding this integration, configure the infrared transmitter you want to use. The setup form only appears when at
+least one Home Assistant `infrared` emitter entity is available.
 
-If you prefer not to use HACS:
+1. Go to **Settings** > **Devices & Services**.
+2. Click **Add Integration**.
+3. Search for **Climate for IR Devices using ZH/JT-03 Remote**.
+4. Enter a name for the climate entity.
+5. Select the infrared transmitter entity.
+6. Optionally select:
+   - a temperature sensor for current room temperature,
+   - a humidity sensor for current room humidity,
+   - a binary power sensor that is `on` when the AC is powered.
+7. Submit the form.
 
-1. Download the `custom_components/climate_ir_zhjt03/` folder from this repository
-2. Copy it to your Home Assistant's `custom_components/` directory
-3. Restart Home Assistant
-
-</details>
-
-### Step 2: Add and Configure the Integration
-
-**Important:** You must have installed the integration first (see Step 1) and restarted Home Assistant!
-
-#### Option 1: One-Click Setup (Quick)
-
-Click the button below to open the configuration dialog:
+You can also start the config flow from My Home Assistant:
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=climate_ir_zhjt03)
 
-Follow the setup wizard:
+## Created Entity
 
-1. Enter your username
-2. Enter your password
-3. Click Submit
+The integration creates a single climate entity for each config entry. The default entity name is based on the name you
+enter during setup.
 
-That's it! The integration will start loading your data.
+Supported controls:
 
-#### Option 2: Manual Configuration
+| Control            | Values                                           |
+| ------------------ | ------------------------------------------------ |
+| HVAC mode          | `off`, `auto`, `cool`, `heat`, `fan_only`, `dry` |
+| Target temperature | 16-32 C                                          |
+| Fan mode           | `auto`, `low`, `medium`, `high`                  |
+| Swing mode         | `off`, `fast`, `slow`                            |
 
-1. Go to **Settings** → **Devices & Services**
-2. Click **"+ Add Integration"**
-3. Search for "Climate for IR Devices using ZH/JT-03 Remote"
-4. Follow the same setup steps as Option 1
+When the climate entity is off, changing target temperature, fan mode, or swing mode updates Home Assistant's stored
+state. The next turn-on command sends the complete state to the infrared transmitter.
 
-### Step 3: Adjust Settings (Optional)
+## Optional Feedback Sensors
 
-After setup, you can adjust options:
+The integration can listen to existing Home Assistant entities:
 
-1. Go to **Settings** → **Devices & Services**
-2. Find **Climate for IR Devices using ZH/JT-03 Remote**
-3. Click **Configure** to adjust:
-   - Update interval (how often to refresh data)
-   - Enable debug logging
+- **Temperature sensor:** updates the climate entity's current temperature. Non-Celsius units are converted to Celsius
+  when Home Assistant supports the unit.
+- **Humidity sensor:** updates the climate entity's current humidity.
+- **Power sensor:** if it turns `off`, the climate entity is marked off. If it turns `on` while the entity is off, the
+  last non-off HVAC mode is restored.
 
-You can also **Reconfigure** your credentials anytime without removing the integration.
-
-### Step 4: Start Using!
-
-The integration creates several entities for your air purifier:
-
-- **Sensors**: Air quality index, PM2.5 levels, filter life remaining, total runtime
-- **Binary Sensors**: API connection status, filter replacement alert
-- **Switches**: Child lock, LED display control
-- **Select**: Fan speed (Low/Medium/High/Auto)
-- **Number**: Target humidity (30-80%)
-- **Button**: Reset filter timer
-- **Fan**: Air purifier fan control
-
-Find all entities in **Settings** → **Devices & Services** → **Climate for IR Devices using ZH/JT-03 Remote** → click on the device.
-
-## Available Entities
-
-### Sensors
-
-- **Air Quality Index (AQI)**: Real-time air quality measurement (0-500 scale)
-  - Includes air quality category (Good/Moderate/Unhealthy/etc.)
-  - Health recommendations based on current AQI
-- **PM2.5**: Fine particulate matter concentration in µg/m³
-- **Filter Life Remaining** (Diagnostic): Shows remaining filter life as percentage
-- **Total Runtime** (Diagnostic): Total operating hours of the device
-
-### Binary Sensors
-
-- **API Connection**: Shows whether the connection to the API is active
-  - On: Connected and receiving data
-  - Off: Connection lost or authentication failed
-  - Shows update interval and API endpoint information
-- **Filter Replacement Needed**: Alerts when filter needs replacement
-  - Shows estimated days remaining
-  - Turns on when filter life is low
-
-### Switches
-
-- **Child Lock**: Prevents accidental button presses on the device
-  - Icon changes based on state (locked/unlocked)
-- **LED Display**: Enable/disable the LED display
-  - Disabled by default - enable in entity settings if needed
-
-### Select
-
-- **Fan Speed**: Choose from Low, Medium, High, or Auto
-  - Icon changes dynamically based on selected speed
-  - Auto mode adjusts speed based on air quality
-  - Syncs bidirectionally with the Air Purifier fan entity
-
-### Number
-
-- **Target Humidity**: Set desired humidity level (30-80%)
-  - Adjustable in 5% increments
-  - Displayed as a slider in the UI
-
-### Button
-
-- **Reset Filter Timer**: Reset the filter life to 100%
-  - Press to reset after replacing the filter
-  - Instantly updates the Filter Life Remaining sensor
-
-### Fan
-
-- **Air Purifier**: Control the air purifier fan speed and power
-  - Three speed levels: Low, Medium, High
-  - Syncs bidirectionally with the Fan Speed select entity
-  - Turn on/off functionality
-
-## Custom Services
-
-The integration provides services for advanced automation:
-
-### `climate_ir_zhjt03.example_action`
-
-Perform a custom action (customize this for your needs).
-
-**Example:**
-
-```yaml
-service: climate_ir_zhjt03.example_action
-data:
-  # Add your parameters here
-```
-
-### `climate_ir_zhjt03.reload_data`
-
-Manually refresh data from the API without waiting for the update interval.
-
-**Example:**
-
-```yaml
-service: climate_ir_zhjt03.reload_data
-```
-
-Use these services in automations or scripts for more control.
-
-## Configuration Options
-
-### During Setup
-
-| Name     | Required | Description           |
-| -------- | -------- | --------------------- |
-| Username | Yes      | Your account username |
-| Password | Yes      | Your account password |
-
-### After Setup (Options)
-
-You can change these anytime by clicking **Configure**:
-
-| Name             | Default | Description                |
-| ---------------- | ------- | -------------------------- |
-| Update Interval  | 1 hour  | How often to refresh data  |
-| Enable Debugging | Off     | Enable extra debug logging |
+These sensors are optional. They do not change how commands are sent; they only improve the displayed state.
 
 ## Troubleshooting
 
-### Authentication Issues
+### No infrared transmitter found
 
-#### Reauthentication
+The config flow aborts when Home Assistant has no `infrared` emitter entities. Set up the device or integration that
+provides your IR transmitter first, then add this integration again.
 
-If your credentials expire or change, Home Assistant will automatically prompt you to reauthenticate:
+### Climate entity is unavailable
 
-1. Go to **Settings** → **Devices & Services**
-2. Look for **"Action Required"** or **"Configuration Required"** message on the integration
-3. Click **"Reconfigure"** or follow the prompt
-4. Enter your updated credentials
-5. Click Submit
+The climate entity is available only while the configured infrared transmitter entity exists and is not unavailable.
+Check the transmitter integration and Home Assistant logs.
 
-The integration will automatically resume normal operation with the new credentials.
+### The AC does not respond
 
-#### Manual Credential Update
+1. Confirm the transmitter can reach the AC.
+2. Check that the AC model uses the ZH/JT-03 protocol.
+3. Try a simple command such as setting cool mode to 24 C.
+4. Enable debug logging and inspect `config/home-assistant.log`.
 
-You can also update credentials at any time without waiting for an error:
-
-1. Go to **Settings** → **Devices & Services**
-2. Find **Climate for IR Devices using ZH/JT-03 Remote**
-3. Click the **3 dots menu** → **Reconfigure**
-4. Enter new username/password
-5. Click Submit
-
-#### Connection Status
-
-Monitor your connection status with the **API Connection** binary sensor:
-
-- **On** (Connected): Integration is receiving data normally
-- **Off** (Disconnected): Connection lost or authentication failed
-  - Check the binary sensor attributes for diagnostic information
-  - Verify credentials if authentication failed
-  - Check network connectivity
-
-### Enable Debug Logging
-
-To enable debug logging for this integration, add the following to your `configuration.yaml`:
+Debug logging:
 
 ```yaml
 logger:
@@ -274,130 +133,43 @@ logger:
     custom_components.climate_ir_zhjt03: debug
 ```
 
-### Common Issues
+## Documentation
 
-#### Authentication Errors
+- [Getting Started](docs/user/GETTING_STARTED.md)
+- [Configuration Reference](docs/user/CONFIGURATION.md)
+- [Examples](docs/user/EXAMPLES.md)
+- [Architecture](docs/development/ARCHITECTURE.md)
+- [Design Decisions](docs/development/DECISIONS.md)
+- [Development Customization](docs/development/CUSTOMIZATION.md)
+- [Release Management](docs/development/RELEASE.md)
+- [Dependencies](DEPENDENCIES.md)
 
-If you receive authentication errors:
+## Development
 
-1. Verify your username and password are correct
-2. Check that your account has the necessary permissions
-3. Wait for the automatic reauthentication prompt, or manually reconfigure
-4. Check the API Connection binary sensor for status
+Use the project scripts; they manage the local environment for this repository.
 
-#### Device Not Responding
+```bash
+script/develop        # Start Home Assistant at http://localhost:8123
+script/markdown       # Format and lint Markdown
+script/lint           # Format and lint supported file types
+script/type-check     # Run Pyright
+script/test           # Run tests
+script/check          # Full validation
+script/hassfest       # Home Assistant integration validation
+```
 
-If your device is not responding:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution details.
 
-1. Check the **API Connection** binary sensor - it should be "On"
-2. Check your network connection
-3. Verify the device is powered on
-4. Check the integration diagnostics (Settings → Devices & Services → Climate for IR Devices using ZH/JT-03 Remote → 3 dots → Download diagnostics)
+## AI-Assisted Development
 
-## 🤝 Contributing
+This repository includes AI-agent instruction files and prompt templates. They are development aids, not runtime
+requirements. If generated changes behave unexpectedly, please open an issue with logs and reproduction steps.
 
-Contributions are welcome! Please open an issue or pull request if you have suggestions or improvements.
+## License
 
-You have two options to set up a development environment — expand below for full details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-<details>
-<summary><strong>Development Setup</strong></summary>
-
-Both options provide the same fully-configured environment with Home Assistant, Python 3.14, Node.js LTS, and all necessary tools.
-
-### Option 1: GitHub Codespaces (Recommended) ☁️
-
-Develop directly in your browser without installing anything locally!
-
-1. Click the green **"Code"** button in this repository
-2. Switch to the **"Codespaces"** tab
-3. Click **"Create codespace on main"**
-4. **Wait for setup** (2-3 minutes first time) — everything installs automatically
-5. **Review and commit** your changes in the Source Control panel (`Ctrl+Shift+G`)
-
-> [!TIP]
-> Codespaces gives you **60 hours/month free** for personal accounts. When you start Home Assistant (`script/develop`), port 8123 forwards automatically.
-
-### Option 2: Local Development with VS Code 💻
-
-#### Prerequisites
-
-You'll need these installed locally:
-
-- **A Docker-compatible container engine** — see options by platform:
-
-  | Option                                                                                                                   | 🍎 macOS | 🐧 Linux | 🪟 Windows | Notes                                                                                                                                                                                                                                     |
-  | ------------------------------------------------------------------------------------------------------------------------ | :------: | :------: | :--------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | [Docker Desktop](https://www.docker.com/products/docker-desktop/)                                                        |    ✅    |    ✅    |     ✅     | **Easiest starting point for all platforms.** GUI-based, well-documented, one installer. Uses WSL2 as default backend on Windows (Hyper-V also available). Installation requires admin rights; daily use does not. Free for personal use. |
-  | [OrbStack](https://orbstack.dev/) ⭐                                                                                     |    ✅    |    —     |     —      | **Recommended for macOS** once Docker Desktop feels slow. Starts in ~2s, much lighter on RAM/CPU, full Docker API compatibility. Free for personal use.                                                                                   |
-  | [Docker CE](https://docs.docker.com/engine/install/) (native) ⭐                                                         |    —     |    ✅    |     —      | **Recommended for Linux.** Install directly via your package manager — no VM, no GUI, no overhead. Free.                                                                                                                                  |
-  | [WSL2](https://learn.microsoft.com/windows/wsl/install) + [Docker CE](https://docs.docker.com/engine/install/ubuntu/) ⭐ |    —     |    —     |     ✅     | **Recommended for Windows** once you're comfortable with WSL2. Docker runs natively inside WSL2 — no GUI overhead. Requires one-time WSL2 setup. Free.                                                                                    |
-  | [Rancher Desktop](https://rancherdesktop.io/)                                                                            |    ✅    |    ✅    |     ✅     | Open source by SUSE. GUI-based, uses WSL2 on Windows. Good alternative to Docker Desktop. Free.                                                                                                                                           |
-  | [Colima](https://github.com/abiosoft/colima)                                                                             |    ✅    |    ✅    |     —      | CLI-only, very lightweight. Good for terminal-focused workflows. Free.                                                                                                                                                                    |
-
-- **VS Code** with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-- **Git** — macOS and Linux usually have it already; see below if not, or to get a newer version:
-  - **🍎 macOS:** The system Git (`xcode-select --install`) works fine. Recommended: `brew install git` ([Homebrew](https://brew.sh/)) for a current version.
-  - **🐧 Linux:** Usually pre-installed. If not: `sudo apt install git` (or your distro's equivalent).
-  - **🪟 Windows + WSL2 ⭐:** Install Git _inside WSL2_ with `sudo apt install git`. Git on Windows itself is not needed — VS Code clones and operates entirely within WSL2.
-  - **🪟 Windows + Docker Desktop:** Install via `winget install Git.Git` or download [Git for Windows](https://git-scm.com/download/win).
-- **Hardware** — the devcontainer runs a full Home Assistant instance including Python tooling:
-
-  |          | Minimum    | Recommended                           |
-  | -------- | ---------- | ------------------------------------- |
-  | **RAM**  | 8 GB       | 16 GB or more                         |
-  | **CPU**  | 4 cores    | 8 cores or more                       |
-  | **Disk** | 10 GB free | 20 GB free (SSD strongly recommended) |
-
-> [!TIP]
-> **Not sure which Docker option to pick?** Start with [Docker Desktop](https://www.docker.com/products/docker-desktop/) — it works on all platforms, has a GUI, and needs no extra setup. The ⭐ options are faster alternatives once you're comfortable. macOS and Linux offer the best devcontainer experience — containers run with no extra VM layer and file I/O is fast. Windows works well too; this integration uses named container volumes (files live inside WSL2, not on the Windows drive) to keep performance acceptable.
-
-> [!NOTE]
-> **New to Dev Containers?** See the [VS Code Dev Containers documentation](https://code.visualstudio.com/docs/devcontainers/containers#_system-requirements) for system requirements and how to install the extension. **Once the extension is installed, you're done** — this repository already ships a complete devcontainer configuration. You don't need to follow the rest of the VS Code guide; the setup steps below are all that's needed.
-
-#### Setup Steps
-
-1. **Clone in a Dev Container:**
-
-   **🍎 macOS / 🐧 Linux:** Clone the repository and open the folder in VS Code → click **"Reopen in Container"** when prompted (or `F1` → **"Dev Containers: Reopen in Container"**).
-
-   **🪟 Windows:** In VS Code, press `F1` → **"Dev Containers: Clone Repository in Named Container Volume..."** and enter the repository URL. This keeps files inside WSL2 for best I/O performance.
-
-2. Wait for the container to build (2-3 minutes first time)
-
-3. **Review and commit** changes in Source Control (`Ctrl+Shift+G`)
-
-4. **Start developing**:
-
-   ```bash
-   script/develop  # Home Assistant runs at http://localhost:8123
-   ```
-
-> [!NOTE]
-> Both Codespaces and local DevContainer provide the exact same experience. The only difference is where the container runs (GitHub's cloud vs. your machine).
-
-</details>
-
----
-
-## 🤖 AI-Assisted Development
-
-> [!NOTE]
-> **Transparency Notice:** This integration was developed with assistance from AI coding agents (GitHub Copilot, Claude, and others). While the codebase follows Home Assistant Core standards, AI-generated code may not be reviewed or tested to the same extent as manually written code. AI tools were used to generate boilerplate code, implement standard integration features (config flow, coordinator, entities), ensure code quality and type safety, and write documentation. If you encounter unexpected behavior, please [open an issue](../../issues) on GitHub.
->
-> _This section can be removed or modified if AI assistance was not used in your integration's development._
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**Made with ❤️ by [@liads][user_profile]**
-
----
+**Made by [@liads][user_profile]**
 
 [commits-shield]: https://img.shields.io/github/commit-activity/y/liads/ha-climate-zh-jt-03.svg?style=for-the-badge
 [commits]: https://github.com/liads/ha-climate-zh-jt-03/commits/main
@@ -408,10 +180,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [releases-shield]: https://img.shields.io/github/release/liads/ha-climate-zh-jt-03.svg?style=for-the-badge
 [releases]: https://github.com/liads/ha-climate-zh-jt-03/releases
 [user_profile]: https://github.com/liads
-
-<!-- Optional badge definitions - uncomment if needed:
-[buymecoffee]: https://www.buymeacoffee.com/liads
-[buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
-[discord]: https://discord.gg/Qa5fW2R
-[discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
--->

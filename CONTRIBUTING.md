@@ -1,99 +1,141 @@
-# Contribution guidelines
+# Contributing
 
-Contributing to this project should be as easy and transparent as possible, whether it's:
+Thanks for helping improve **Climate for IR Devices using ZH/JT-03 Remote**.
 
-- Reporting a bug
-- Discussing the current state of the code
-- Submitting a fix
-- Proposing new features
+## How to Contribute
 
-## GitHub is used for everything
+Use GitHub issues and pull requests for bugs, fixes, and feature proposals.
 
-GitHub is used to host code, to track issues and feature requests, as well as accept pull requests.
-
-Pull requests are the best way to propose changes to the codebase.
-
-1. Fork the repo and create your branch from `main`.
+1. Fork the repository and create a branch from `main`.
 2. Run `script/setup/bootstrap` to install dependencies and pre-commit hooks.
-3. If you've changed something, update the documentation.
-4. Make sure your code passes all checks (using `script/check` for linting and type checking).
-5. Test your contribution.
-6. Issue that pull request!
+3. Make a focused change.
+4. Update documentation when behavior changes.
+5. Make sure your code passes all checks (using `script/check` for linting and type checking).
+6. Test your contribution.
+7. Open a pull request.
 
-## Any contributions you make will be under the MIT Software License
+## Development Environment
 
-In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
+Use the repository scripts rather than direct `hass`, `pip`, or `pytest` commands.
 
-## Report bugs using GitHub's [issues](../../issues)
+```bash
+script/setup/bootstrap
+script/develop
+script/markdown
+script/lint
+script/type-check
+script/test
+script/check
+script/hassfest
+```
 
-GitHub issues are used to track public bugs.
-Report a bug by [opening a new issue](../../issues/new/choose); it's that easy!
+For docs-only changes, `script/markdown` is usually enough.
 
-## Write bug reports with detail, background, and sample code
+## Code Style
 
-**Great Bug Reports** tend to have:
+- Python: 4 spaces, double quotes, full type hints, 120 character line target.
+- YAML: 2 spaces and modern Home Assistant syntax.
+- JSON: 2 spaces, no comments, no trailing commas.
+- Markdown: format and lint with `script/markdown`.
 
-- A quick summary and/or background
-- Steps to reproduce
-  - Be specific!
-  - Give sample code if you can.
-- What you expected would happen
-- What actually happens
-- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+## Project Architecture
 
-People _love_ thorough bug reports. I'm not even kidding.
+The current integration creates a single assumed-state `climate` entity backed by Home Assistant's `infrared`
+integration.
 
-## Use a Consistent Coding Style
+Key files:
 
-This project uses:
+- `custom_components/climate_ir_zhjt03/climate/zh_jt_03.py`
+- `custom_components/climate_ir_zhjt03/protocol.py`
+- `custom_components/climate_ir_zhjt03/config_flow_handler/config_flow.py`
+- `custom_components/climate_ir_zhjt03/diagnostics.py`
 
-- [Ruff](https://github.com/astral-sh/ruff) for linting and formatting
-- [Pyright](https://github.com/microsoft/pyright) for type checking
+There is no API client, data coordinator, or custom service action layer today. Add those only when a feature genuinely
+needs them.
 
-Run `script/check` to lint and type-check your code before submitting, or `script/lint` to auto-format and fix linting issues.
+## Bug Reports
 
-**Local validation:** Run `script/hassfest` to validate your integration against Home Assistant's quality standards using the official validation tools. This checks manifest.json, translations, services.yaml (service action definitions), and integration structure locally before pushing to GitHub.
+Useful bug reports include:
+
+- Home Assistant version.
+- Integration version.
+- Infrared transmitter integration and entity ID.
+- AC model, if known.
+- Steps to reproduce.
+- Expected behavior and actual behavior.
+- Relevant log lines from `config/home-assistant.log`.
+
+Great bug reports also include a short summary, exact steps to reproduce, what you expected, what actually happened, and
+anything you already tried. If an automation, script, or dashboard card is involved, include the smallest YAML snippet
+that reproduces the issue.
+
+## Pull Request Checks
+
+Before opening a pull request, run the narrowest relevant checks:
+
+| Change type          | Command                                 |
+| -------------------- | --------------------------------------- |
+| Markdown only        | `script/markdown`                       |
+| Python only          | `script/python` and `script/type-check` |
+| Tests relevant       | `script/test`                           |
+| Integration metadata | `script/hassfest`                       |
+| Broad changes        | `script/check`                          |
+
+`script/hassfest` validates `manifest.json`, translations, integration structure, and Home Assistant metadata locally.
+Use it after changing manifest fields, config flow, translations, diagnostics, or platform structure.
+
+Fix-mode scripts print the errors they cannot fix. After running `script/lint`, only manually edit issues that remain in
+the output. `script/type-check` has no auto-fix mode.
+
+## Code Quality Expectations
+
+This is a custom integration, but contributions should still follow Home Assistant Core-style quality where reasonable:
+
+- typed Python,
+- async-safe Home Assistant patterns,
+- stable config-entry and entity identity,
+- redacted diagnostics,
+- no YAML setup for the integration,
+- no direct hardware assumptions outside the infrared transmitter abstraction.
+
+For this integration specifically, keep protocol behavior in `protocol.py`, climate behavior in
+`climate/zh_jt_03.py`, and config-flow behavior in `config_flow_handler/config_flow.py`.
 
 ## GitHub Copilot Support
 
-This project includes [prompt files](./.github/prompts/) to help you work more efficiently with GitHub Copilot. These reusable templates provide context and requirements for common tasks:
+This project includes prompt files under `.github/prompts/` for common maintenance tasks. They are optional aids and may
+describe broader blueprint patterns than this integration currently uses.
 
-- **Add New Sensor** - Create sensors with proper structure
-- **Add New Service** - Implement services with validation
-- **Add Config Option** - Add configuration options to flows
-- **Add Entity to Device** - Expand device capabilities
-- **Debug Coordinator Issue** - Diagnose data update problems
-- **Update Translations** - Manage multilingual strings
+Useful prompts include:
 
-**Example usage in Copilot Chat:**
+- **Add Config Option**
+- **Add Entity Platform**
+- **Add Entity to Device**
+- **Create ADR**
+- **Create Implementation Plan**
+- **Review Integration**
+- **Update Translations**
 
-```text
-#file:Add New Sensor.prompt.md Add a temperature sensor
-```
+Review generated code carefully and keep it aligned with the current architecture.
 
-See the prompt files in `.github/prompts/` for details on using these templates.
+## Breaking Changes
 
-## Code Quality
+Call out changes that affect:
 
-This blueprint follows Home Assistant's [integration quality standards](https://developers.home-assistant.io/docs/core/integration-quality-scale/) as best practices. The code includes:
+- entity IDs or unique IDs,
+- config-entry data,
+- supported climate modes or state attributes,
+- service signatures if services are added later,
+- minimum Home Assistant or HACS versions.
 
-- ✅ Comprehensive docstrings with links to official documentation
-- ✅ Full type hints for better IDE support
-- ✅ Config flow with reauthentication support
-- ✅ Proper error handling and entity unavailability
-- ✅ Coordinator pattern for efficient data fetching
+## AI Agent Support
 
-**Don't worry!** You don't need to maintain all of this. The blueprint gives you a solid, well-documented starting point. Feel free to simplify or adapt anything to your needs - the goal is to help you get started quickly with good patterns, not to overwhelm you with requirements.
+Agent instructions are in [AGENTS.md](AGENTS.md). GitHub Copilot also reads
+[.github/copilot-instructions.md](.github/copilot-instructions.md).
 
-## Test your code modification
-
-This project comes with a complete development environment in a container, easy to launch
-if you use Visual Studio Code. With this container you will have a standalone
-Home Assistant instance running and already configured with the included
-[`configuration.yaml`](./config/configuration.yaml) file.
-
-You can also run tests using `script/test` to ensure your changes don't break existing functionality.
+Prompt files under `.github/prompts/` are development aids. Review generated code carefully, especially for accidental
+coordinator/API scaffolding that does not match the current architecture.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under its MIT License.
+By contributing, you agree that your contribution is licensed under the MIT License.

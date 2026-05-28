@@ -1,163 +1,162 @@
 # Examples
 
-This page provides ready-to-use examples for automations, dashboards, and blueprints
-with the Climate for IR Devices using ZH/JT-03 Remote custom integration.
-
-Replace entity IDs like `sensor.device_name_*` with your actual entity IDs after
-setting up the integration.
-
-## Automations
-
-### Notify when a sensor exceeds a threshold
-
-```yaml
-automation:
-  - alias: "Alert when sensor is high"
-    trigger:
-      - trigger: numeric_state
-        entity_id: sensor.device_name_air_quality
-        above: 100
-    action:
-      - action: notify.notify
-        data:
-          title: "Air quality alert"
-          message: "Sensor value exceeded 100!"
-```
-
-### Turn on a switch when connectivity is lost
-
-```yaml
-automation:
-  - alias: "React to connectivity loss"
-    trigger:
-      - trigger: state
-        entity_id: binary_sensor.device_name_connectivity
-        to: "off"
-        for:
-          minutes: 5
-    action:
-      - action: switch.turn_off
-        target:
-          entity_id: switch.device_name_switch
-```
-
-### Call a service action on schedule
-
-```yaml
-automation:
-  - alias: "Reset filter counter weekly"
-    trigger:
-      - trigger: time
-        at: "03:00:00"
-    condition:
-      - condition: time
-        weekday:
-          - mon
-    action:
-      - action: climate_ir_zhjt03.example_service
-        target:
-          entity_id: button.device_name_reset_filter
-```
-
-### Use a blueprint for threshold alerts
-
-Save this as a blueprint file and import it in Home Assistant:
-
-```yaml
-blueprint:
-  name: Climate for IR Devices using ZH/JT-03 Remote — Threshold Alert
-  description: Send a notification when a sensor exceeds a configurable threshold.
-  domain: automation
-  input:
-    sensor_entity:
-      name: Sensor
-      selector:
-        entity:
-          domain: sensor
-          integration: climate_ir_zhjt03
-    threshold:
-      name: Threshold value
-      selector:
-        number:
-          min: 0
-          max: 1000
-    notify_target:
-      name: Notification service
-      default: notify.notify
-      selector:
-        text:
-
-trigger:
-  - trigger: numeric_state
-    entity_id: !input sensor_entity
-    above: !input threshold
-
-action:
-  - action: !input notify_target
-    data:
-      message: >-
-        {{ state_attr(trigger.entity_id, 'friendly_name') }}
-        exceeded {{ threshold }} (current value: {{ trigger.to_state.state }}).
-```
+These examples assume your climate entity is `climate.zh_jt_03_ac`. Replace it with your actual entity ID.
 
 ## Dashboard Cards
 
-### Sensor value card
+### Thermostat Card
 
 ```yaml
-type: sensor
-entity: sensor.device_name_air_quality
-name: Air Quality
-graph: line
+type: thermostat
+entity: climate.zh_jt_03_ac
+features:
+  - type: climate-hvac-modes
+    hvac_modes:
+      - "off"
+      - auto
+      - cool
+      - heat
+      - fan_only
+      - dry
 ```
 
-### Device summary — entities card
+### Entities Card
 
 ```yaml
 type: entities
-title: My Device
+title: Bedroom AC
 entities:
-  - entity: sensor.device_name_air_quality
-    name: Air Quality
-  - entity: binary_sensor.device_name_connectivity
-    name: Connected
-  - entity: binary_sensor.device_name_filter
-    name: Filter Status
-  - entity: switch.device_name_switch
-    name: Power
-  - entity: select.device_name_fan_speed
-    name: Fan Speed
-  - entity: number.device_name_threshold
-    name: Threshold
+  - entity: climate.zh_jt_03_ac
+    name: AC
+  - entity: sensor.bedroom_temperature
+    name: Room temperature
+  - entity: sensor.bedroom_humidity
+    name: Room humidity
 ```
 
-### Status badge — multiple entities
+## Automations
+
+### Start Cooling When the Room Is Hot
 
 ```yaml
-type: glance
-title: Device Status
-entities:
-  - entity: binary_sensor.device_name_connectivity
-    name: Online
-  - entity: sensor.device_name_air_quality
-    name: Air Quality
-  - entity: binary_sensor.device_name_filter
-    name: Filter
-show_state: true
+automation:
+  - alias: "Bedroom AC cool when hot"
+    trigger:
+      - trigger: numeric_state
+        entity_id: sensor.bedroom_temperature
+        above: 27
+        for:
+          minutes: 10
+    condition:
+      - condition: state
+        entity_id: binary_sensor.bedroom_window
+        state: "off"
+    action:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          hvac_mode: cool
+          temperature: 24
+      - action: climate.set_fan_mode
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          fan_mode: auto
 ```
 
-### History graph
+### Turn Off When a Window Opens
 
 ```yaml
-type: history-graph
-title: Air Quality (last 24 h)
-entities:
-  - entity: sensor.device_name_air_quality
-hours_to_show: 24
+automation:
+  - alias: "Bedroom AC off when window opens"
+    trigger:
+      - trigger: state
+        entity_id: binary_sensor.bedroom_window
+        to: "on"
+        for:
+          minutes: 2
+    action:
+      - action: climate.turn_off
+        target:
+          entity_id: climate.zh_jt_03_ac
+```
+
+### Dry Mode During High Humidity
+
+```yaml
+automation:
+  - alias: "Bedroom AC dry mode on high humidity"
+    trigger:
+      - trigger: numeric_state
+        entity_id: sensor.bedroom_humidity
+        above: 65
+        for:
+          minutes: 15
+    action:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          hvac_mode: dry
+```
+
+### Restore Comfort Mode in the Evening
+
+```yaml
+automation:
+  - alias: "Bedroom AC evening comfort"
+    trigger:
+      - trigger: time
+        at: "21:30:00"
+    action:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          hvac_mode: cool
+          temperature: 25
+      - action: climate.set_fan_mode
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          fan_mode: low
+      - action: climate.set_swing_mode
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          swing_mode: slow
+```
+
+## Script
+
+### Send a Known Good Cooling Command
+
+```yaml
+script:
+  zh_jt_03_cool_24:
+    alias: "ZH/JT-03 cool 24"
+    sequence:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          hvac_mode: cool
+          temperature: 24
+      - action: climate.set_fan_mode
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          fan_mode: auto
+      - action: climate.set_swing_mode
+        target:
+          entity_id: climate.zh_jt_03_ac
+        data:
+          swing_mode: "off"
 ```
 
 ## Related Documentation
 
-- [Configuration Reference](./CONFIGURATION.md) - All configuration options
-- [Getting Started](./GETTING_STARTED.md) - Installation and initial setup
-- [GitHub Issues](https://github.com/liads/ha-climate-zh-jt-03/issues) - Report problems
+- [Configuration Reference](./CONFIGURATION.md)
+- [Getting Started](./GETTING_STARTED.md)
+- [GitHub Issues](https://github.com/liads/ha-climate-zh-jt-03/issues)

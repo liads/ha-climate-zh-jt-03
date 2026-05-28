@@ -1,191 +1,78 @@
-# Getting Started with Climate for IR Devices using ZH/JT-03 Remote
+# Getting Started
 
-This guide will help you install and set up the Climate for IR Devices using ZH/JT-03 Remote custom integration for Home Assistant.
+This guide walks through installing and setting up **Climate for IR Devices using ZH/JT-03 Remote** in Home Assistant.
 
 ## Prerequisites
 
-- Home Assistant 2025.7.0 or newer
-- HACS (Home Assistant Community Store) installed
-- Network connectivity to [external service/device]
+- Home Assistant 2026.4.0 or newer.
+- HACS 2.0.5 or newer, unless you install manually.
+- A Home Assistant `infrared` transmitter entity.
+- An AC unit that responds to the ZH/JT-03 IR protocol.
 
-## Installation
+The integration does not communicate with the AC directly. It builds ZH/JT-03 IR commands and sends them through the
+infrared transmitter entity you select during setup.
 
-### Via HACS (Recommended)
+## Install
 
-1. Open HACS in your Home Assistant instance
-2. Go to "Integrations"
-3. Click the three dots in the top right corner
-4. Select "Custom repositories"
-5. Add this repository URL: `https://github.com/liads/ha-climate-zh-jt-03`
-6. Set category to "Integration"
-7. Click "Add"
-8. Find "Climate for IR Devices using ZH/JT-03 Remote" in the integration list
-9. Click "Download"
-10. Restart Home Assistant
+### HACS
 
-### Manual Installation
+1. Open HACS in Home Assistant.
+2. Go to **Integrations**.
+3. Open the three-dot menu and choose **Custom repositories**.
+4. Add this repository URL: `https://github.com/liads/ha-climate-zh-jt-03`.
+5. Select **Integration** as the category.
+6. Download **Climate for IR Devices using ZH/JT-03 Remote**.
+7. Restart Home Assistant.
 
-1. Download the latest release from the [releases page](https://github.com/liads/ha-climate-zh-jt-03/releases)
-2. Extract the `climate_ir_zhjt03` folder from the archive
-3. Copy it to `custom_components/climate_ir_zhjt03/` in your Home Assistant configuration directory
-4. Restart Home Assistant
+### Manual
 
-## Initial Setup
+1. Download the latest release from the [releases page](https://github.com/liads/ha-climate-zh-jt-03/releases).
+2. Copy `custom_components/climate_ir_zhjt03/` into your Home Assistant `custom_components/` directory.
+3. Restart Home Assistant.
 
-After installation, add the integration:
+## Add the Integration
 
-1. Go to **Settings** → **Devices & Services**
-2. Click **+ Add Integration**
-3. Search for "Climate for IR Devices using ZH/JT-03 Remote"
-4. Follow the configuration steps:
+1. Go to **Settings** > **Devices & Services**.
+2. Click **Add Integration**.
+3. Search for **Climate for IR Devices using ZH/JT-03 Remote**.
+4. Fill in the setup form:
 
-### Step 1: Connection Information
+| Field                | Required | Description                                                   |
+| -------------------- | -------- | ------------------------------------------------------------- |
+| Name                 | Yes      | Friendly name for the AC. The default is `ZH/JT-03 AC`.       |
+| Infrared transmitter | Yes      | The Home Assistant `infrared` entity that sends commands.     |
+| Temperature sensor   | No       | Existing temperature sensor used as current room temperature. |
+| Humidity sensor      | No       | Existing humidity sensor used as current room humidity.       |
+| Power sensor         | No       | Existing binary sensor that is `on` when the AC is powered.   |
 
-Enter the required connection details:
+The config flow aborts with **No infrared transmitter entities found** if no supported transmitter exists yet. Configure
+your IR transmitter first, then retry.
 
-- **Host/IP Address:** The hostname or IP address of your device/service
-- **API Key/Token:** Your authentication credentials (if applicable)
-- **Port:** Connection port (default: 8080)
+## Verify Basic Control
 
-Click **Submit** to test the connection.
+After setup, Home Assistant creates one climate entity.
 
-### Step 2: Configuration Options
+1. Open the climate entity.
+2. Set HVAC mode to **Cool**.
+3. Set the target temperature to **24 C**.
+4. Choose a fan mode, such as **Auto**.
+5. Confirm the transmitter sends a command and the AC responds.
 
-Configure optional settings:
+The entity is assumed-state. Home Assistant updates its displayed state after sending the command, but the AC normally
+does not report back whether the command was received.
 
-- **Update Interval:** How often to poll for updates (default: 5 minutes)
-- **Name:** Friendly name for this integration instance
+## Optional Feedback Sensors
 
-Click **Submit** to complete setup.
+Feedback sensors can make the displayed state more useful:
 
-## What Gets Created
+- Use a room temperature sensor so the climate card shows current temperature.
+- Use a humidity sensor so the climate card shows current humidity.
+- Use a power sensor when another device can detect whether the AC is actually on.
 
-After successful setup, the integration creates:
-
-### Devices
-
-- **Device Name:** Main device representing your connected service/hardware
-  - Model information
-  - Software version
-  - Configuration URL (link to device web interface)
-
-### Entities
-
-The following entities are automatically created:
-
-#### Sensors
-
-- `sensor.<device_name>_<sensor_name>` - Descriptive sensor measurements
-- More sensors as applicable to your setup
-
-#### Binary Sensors
-
-- `binary_sensor.<device_name>_<sensor_name>` - On/off status indicators
-
-#### Switches
-
-- `switch.<device_name>_<switch_name>` - Controllable on/off switches
-
-#### Other Platforms
-
-Additional entities may be created depending on your device capabilities.
-
-## First Steps
-
-### Dashboard Cards
-
-Add entities to your dashboard:
-
-1. Go to your dashboard
-2. Click **Edit Dashboard** → **Add Card**
-3. Choose card type (e.g., "Entities", "Glance")
-4. Select entities from "Climate for IR Devices using ZH/JT-03 Remote"
-
-Example entities card:
-
-```yaml
-type: entities
-title: Climate for IR Devices using ZH/JT-03 Remote
-entities:
-  - sensor.device_name_sensor
-  - binary_sensor.device_name_connectivity
-  - switch.device_name_switch
-```
-
-### Automations
-
-Use the integration in automations:
-
-**Example - Trigger on sensor change:**
-
-```yaml
-automation:
-  - alias: "React to sensor value"
-    trigger:
-      - trigger: state
-        entity_id: sensor.device_name_sensor
-    action:
-      - action: notify.notify
-        data:
-          message: "Sensor changed to {{ trigger.to_state.state }}"
-```
-
-**Example - Control switch based on time:**
-
-```yaml
-automation:
-  - alias: "Turn on in morning"
-    trigger:
-      - trigger: time
-        at: "07:00:00"
-    action:
-      - action: switch.turn_on
-        target:
-          entity_id: switch.device_name_switch
-```
-
-## Troubleshooting
-
-### Connection Failed
-
-If setup fails with connection errors:
-
-1. Verify the host/IP address is correct and reachable
-2. Check that the API key/token is valid
-3. Ensure no firewall is blocking the connection
-4. Check Home Assistant logs for detailed error messages
-
-### Entities Not Updating
-
-If entities show "Unavailable" or don't update:
-
-1. Check that the device/service is online
-2. Verify API credentials haven't expired
-3. Review logs: **Settings** → **System** → **Logs**
-4. Try reloading the integration
-
-### Debug Logging
-
-Enable debug logging to troubleshoot issues:
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.climate_ir_zhjt03: debug
-```
-
-Add this to `configuration.yaml`, restart, and reproduce the issue. Check logs for detailed information.
+If you skip these fields, the integration still works; only the corresponding current readings are absent.
 
 ## Next Steps
 
-- See [CONFIGURATION.md](./CONFIGURATION.md) for detailed configuration options
-- See [EXAMPLES.md](./EXAMPLES.md) for more automation examples
-- Report issues at [GitHub Issues](https://github.com/liads/ha-climate-zh-jt-03/issues)
-
-## Support
-
-For help and discussion:
-
-- [GitHub Discussions](https://github.com/liads/ha-climate-zh-jt-03/discussions)
-- [Home Assistant Community Forum](https://community.home-assistant.io/)
+- See [Configuration Reference](./CONFIGURATION.md) for supported modes and behavior.
+- See [Examples](./EXAMPLES.md) for dashboard and automation snippets.
+- Report issues at [GitHub Issues](https://github.com/liads/ha-climate-zh-jt-03/issues).

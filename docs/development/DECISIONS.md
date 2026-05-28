@@ -1,137 +1,131 @@
-# Architectural and Design Decisions
+# Design Decisions
 
-This document records significant architectural and design decisions made during the development of this integration.
-
-## Format
-
-Each decision is documented with:
-
-- **Date:** When the decision was made
-- **Context:** Why this decision was necessary
-- **Decision:** What was decided
-- **Rationale:** Why this approach was chosen
-- **Consequences:** Expected impacts and trade-offs
-
----
+This file records architecture decisions that affect maintainability or user-visible behavior.
 
 ## Decision Log
 
-### Use DataUpdateCoordinator for All Data Fetching
+### Use Home Assistant's Infrared Integration
 
-**Date:** 2025-11-29 (Template initialization)
+**Date:** 2026-05-27
 
-**Context:** The integration needs to fetch data from an external API and share it with multiple entities. Home Assistant provides several patterns for this.
+**Context:** The integration needs to send IR commands but should not own transmitter hardware support.
 
-**Decision:** Use `DataUpdateCoordinator` from `homeassistant.helpers.update_coordinator` as the central data management component.
-
-**Rationale:**
-
-- Provides built-in support for update intervals and error handling
-- Automatic retry with exponential backoff
-- Shared data access prevents duplicate API calls
-- Standard pattern recommended by Home Assistant
-- Entities automatically become unavailable when coordinator fails
-
-**Consequences:**
-
-- All entities must inherit from `CoordinatorEntity`
-- Single update interval applies to all entities
-- Data is fetched even if no entities are enabled
-- Coordinator manages entity lifecycle and availability
-
----
-
-### Separate API Client from Coordinator
-
-**Date:** 2025-11-29 (Template initialization)
-
-**Context:** The coordinator needs to fetch data, but business logic should be separated from data transport.
-
-**Decision:** Implement API communication in separate `api/client.py` module, coordinator only orchestrates updates.
+**Decision:** Depend on Home Assistant's `infrared` integration and send commands with `async_send_command`.
 
 **Rationale:**
 
-- Separation of concerns: transport vs. orchestration
-- Easier to test API client in isolation
-- Simpler to swap API implementation if needed
-- Clearer error handling boundaries
+- Keeps transmitter discovery, device support, and transport details in the infrared integration.
+- Allows this integration to focus on ZH/JT-03 climate behavior and protocol encoding.
+- Avoids adding device-specific transmitter dependencies.
 
 **Consequences:**
 
-- Additional abstraction layer
-- Coordinator depends on API client
-- API client raises custom exceptions for error translation
+- Setup requires an existing `infrared` emitter entity.
+- Climate availability follows the selected transmitter entity.
+- Troubleshooting sometimes requires checking the transmitter integration logs too.
 
----
+### Model the AC as an Assumed-State Climate Entity
 
-### Platform-Specific Directories
+**Date:** 2026-05-27
 
-**Date:** 2025-11-29 (Template initialization)
+**Context:** Typical IR AC remotes send one-way commands and do not receive state from the AC.
 
-**Context:** Integration supports multiple platforms (sensor, binary_sensor, switch, etc.).
-
-**Decision:** Each platform gets its own directory with individual entity files.
+**Decision:** Expose a Home Assistant `climate` entity with `_attr_assumed_state = True`.
 
 **Rationale:**
 
-- Clear organization as integration grows
-- Easier to find specific entity implementations
-- Supports multiple entities per platform cleanly
-- Follows Home Assistant Core pattern
+- Matches the physical limitations of IR control.
+- Gives users the expected climate card and service APIs.
+- Avoids pretending the integration can verify command delivery.
 
 **Consequences:**
 
-- More files/directories than single-file approach
-- Platform `__init__.py` must import and register entities
-- Slightly more initial setup overhead
+- Home Assistant state updates immediately after a command is sent.
+- Users may need optional feedback sensors to improve displayed state.
+- Automations should be written with the assumption that IR commands can be missed.
 
----
+### Configure One Climate Entity per IR Transmitter
 
-### EntityDescription for Static Metadata
+**Date:** 2026-05-27
 
-**Date:** 2025-11-29 (Template initialization)
+**Context:** A configured entry binds one ZH/JT-03 AC abstraction to one transmitter entity.
 
-**Context:** Entities have static metadata (name, icon, device class) that doesn't change.
-
-**Decision:** Use `EntityDescription` dataclasses to define static entity metadata.
+**Decision:** Derive the config-entry unique ID from the selected transmitter and reject duplicates.
 
 **Rationale:**
 
-- Declarative and easy to read
-- Type-safe with dataclasses
-- Recommended Home Assistant pattern
-- Separates static configuration from dynamic behavior
+- Prevents accidental duplicate climate entities sending conflicting commands through the same transmitter.
+- Keeps setup simple and predictable.
+- Preserves stable entity IDs when the transmitter has a stable registry unique ID.
 
 **Consequences:**
 
-- Each entity type needs an EntityDescription
-- Dynamic entities need custom handling
-- Static and dynamic properties clearly separated
+- A single transmitter can only be configured once for this integration.
+- Users need separate transmitter entities for separate AC units.
 
----
+### Keep Protocol Encoding Local
+
+**Date:** 2026-05-27
+
+**Context:** The ZH/JT-03 command format is small and deterministic.
+
+**Decision:** Encode frames in `protocol.py` instead of depending on a remote API or large third-party climate library.
+
+**Rationale:**
+
+- The behavior is easy to test with fixed timings.
+- There is no network I/O and no polling lifecycle.
+- The integration remains small and transparent.
+
+**Consequences:**
+
+- Protocol changes require code changes and tests.
+- Support for additional remotes should be added as separate protocol code, not mixed into the current encoder.
+
+### Use Optional Existing Sensors for Feedback
+
+**Date:** 2026-05-27
+
+**Context:** Some Home Assistant installations already have room sensors or power monitoring.
+
+**Decision:** Let users select optional temperature, humidity, and power entities during setup.
+
+**Rationale:**
+
+- Improves climate card state without forcing extra entities or dependencies.
+- Keeps the IR control path independent from sensor availability.
+- Lets users choose the most accurate sensors for their room.
+
+**Consequences:**
+
+- Feedback sensors are not required for command sending.
+- Bad sensor values are ignored rather than making the climate entity unavailable.
+- Changing selected sensors currently requires removing and re-adding the integration unless a future reconfigure flow is
+  added.
+
+### Do Not Use a DataUpdateCoordinator
+
+**Date:** 2026-05-27
+
+**Context:** The integration sends commands and listens to selected entity state changes. It does not poll shared remote
+data.
+
+**Decision:** Do not add a `DataUpdateCoordinator` until there is a real polling or shared-data need.
+
+**Rationale:**
+
+- Avoids unnecessary lifecycle complexity.
+- The climate entity can subscribe directly to the few Home Assistant entities it needs.
+- The infrared command path is command-driven, not poll-driven.
+
+**Consequences:**
+
+- Future polling features must introduce a coordinator deliberately.
+- Agent instructions and docs should not assume coordinator/API packages exist in this repository.
 
 ## Future Considerations
 
-### State Restoration
-
-**Status:** Not yet implemented
-
-Consider implementing state restoration for switches and configurable settings to maintain state across Home Assistant restarts when the external device is unavailable.
-
-### Multi-Device Support
-
-**Status:** Not yet implemented
-
-Current architecture assumes single device per config entry. If multi-device support is needed, coordinator data structure will need redesign to map device ID → data.
-
-### Polling vs. Push
-
-**Status:** Uses polling
-
-Currently implements polling-based updates. If the API supports webhooks or WebSocket, consider implementing push-based updates for real-time responsiveness.
-
----
-
-## Decision Review
-
-These decisions should be reviewed periodically (suggested: quarterly or when major features are added) to ensure they still serve the integration's needs.
+- Add a reconfigure flow for changing optional sensors without deleting the entry.
+- Add more protocols only if they can be isolated cleanly.
+- Consider repairs if common setup mistakes become detectable.
+- Document known compatible AC models as users report validated hardware.

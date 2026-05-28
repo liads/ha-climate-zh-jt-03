@@ -1,249 +1,123 @@
 # Configuration Reference
 
-This document describes all configuration options and settings available in the Climate for IR Devices using ZH/JT-03 Remote custom integration.
+This page describes the configuration options and runtime behavior of **Climate for IR Devices using ZH/JT-03 Remote**.
 
-## Integration Configuration
+## Setup Fields
 
-### Initial Setup Options
+Configuration is done through Home Assistant's UI config flow. YAML setup is not supported.
 
-These options are configured during initial setup via the Home Assistant UI.
+| Field                | Required | Stored key           | Description                                                    |
+| -------------------- | -------- | -------------------- | -------------------------------------------------------------- |
+| Name                 | Yes      | `name`               | Friendly name used for the config entry and device.            |
+| Infrared transmitter | Yes      | `infrared_entity_id` | Home Assistant `infrared` entity that sends raw commands.      |
+| Temperature sensor   | No       | `temperature_sensor` | Existing temperature sensor used for `current_temperature`.    |
+| Humidity sensor      | No       | `humidity_sensor`    | Existing humidity sensor used for `current_humidity`.          |
+| Power sensor         | No       | `power_sensor`       | Existing binary sensor used to reconcile assumed on/off state. |
 
-#### Connection Settings
+Each infrared transmitter can be configured only once. The unique ID is derived from the transmitter's entity-registry
+unique ID when available, otherwise from its entity ID.
 
-| Option      | Type    | Required | Default | Description                                  |
-| ----------- | ------- | -------- | ------- | -------------------------------------------- |
-| **Host**    | string  | Yes      | -       | Hostname or IP address of the device/service |
-| **Port**    | integer | No       | 8080    | Connection port                              |
-| **API Key** | string  | Yes\*    | -       | Authentication key or token                  |
-| **Use SSL** | boolean | No       | false   | Enable HTTPS connection                      |
+## Climate Capabilities
 
-\*Required if the device/service requires authentication.
+The integration creates one climate entity per config entry.
 
-#### Update Settings
+| Capability         | Values                                           |
+| ------------------ | ------------------------------------------------ |
+| HVAC modes         | `off`, `auto`, `cool`, `heat`, `fan_only`, `dry` |
+| Target temperature | 16-32 C                                          |
+| Temperature step   | 1 C                                              |
+| Fan modes          | `auto`, `low`, `medium`, `high`                  |
+| Swing modes        | `off`, `fast`, `slow`                            |
 
-| Option              | Type              | Required | Default  | Description                                         |
-| ------------------- | ----------------- | -------- | -------- | --------------------------------------------------- |
-| **Update Interval** | integer (seconds) | No       | 300      | How often to poll for updates (minimum: 30 seconds) |
-| **Name**            | string            | No       | "Device" | Friendly name for the integration instance          |
+The climate entity supports Home Assistant's turn on, turn off, target temperature, fan mode, and swing mode features.
 
-### Options Flow (Reconfiguration)
+## Assumed State Behavior
 
-After initial setup, you can modify settings:
+IR control is one-way, so the entity is marked as assumed-state.
 
-1. Go to **Settings** → **Devices & Services**
-2. Find "Climate for IR Devices using ZH/JT-03 Remote"
-3. Click **Configure**
-4. Modify settings
-5. Click **Submit**
+- Sending a command updates Home Assistant's state immediately.
+- The integration restores the previous climate state after Home Assistant restarts.
+- The entity remembers the last non-off HVAC mode and uses it for turn-on.
+- If the entity is off, changing target temperature, fan mode, or swing mode stores the value without sending a command.
+- The next non-off HVAC command sends the full mode, temperature, fan, and swing state.
 
-**Available options:**
+## Availability
 
-- Update interval
-- Name/identifier
-- Connection timeout
-- Additional features (device-specific)
+The climate entity is available when the configured infrared transmitter entity exists and is not `unavailable`.
 
-## Entity Configuration
+If the transmitter becomes unavailable, the climate entity becomes unavailable too. It returns to available when the
+transmitter returns.
 
-### Entity Customization
+## Optional Sensor Handling
 
-Customize entities via the UI or `configuration.yaml`:
+### Temperature Sensor
 
-#### Via Home Assistant UI
+The integration reads the selected sensor state as a number. Celsius values are used directly. Other temperature units
+are converted to Celsius when Home Assistant supports the unit.
 
-1. Go to **Settings** → **Devices & Services** → **Entities**
-2. Find and click the entity
-3. Click the settings icon
-4. Modify:
-   - Entity ID
-   - Name
-   - Icon
-   - Device class (for applicable entities)
-   - Area assignment
+Unknown, unavailable, non-numeric, and non-finite values are ignored.
 
-#### Via configuration.yaml
+### Humidity Sensor
 
-```yaml
-homeassistant:
-  customize:
-    sensor.device_name_sensor:
-      friendly_name: "Custom Sensor Name"
-      icon: mdi:custom-icon
-      unit_of_measurement: "units"
-```
+The integration reads the selected sensor state as a number and exposes it as current humidity.
 
-### Disabling Entities
+Unknown, unavailable, non-numeric, and non-finite values are ignored.
 
-If you don't need certain entities:
+### Power Sensor
 
-1. Go to **Settings** → **Devices & Services** → **Entities**
-2. Find the entity
-3. Click it, then click **Settings** icon
-4. Toggle **Enable entity** off
+The optional power sensor is expected to be a binary sensor:
 
-Disabled entities won't update or consume resources.
+- `off`: the climate entity is set to HVAC off.
+- `on`: if the climate entity is currently off, the last non-off HVAC mode is restored.
 
-## Services
+The power sensor does not send commands. It only adjusts Home Assistant's assumed state.
 
-The integration provides the following services:
+## Diagnostics
 
-### `climate_ir_zhjt03.example_service`
+Diagnostics are available from **Settings** > **Devices & Services** > this integration > three-dot menu > **Download
+diagnostics**.
 
-Execute an example service action on the device.
+The diagnostics payload includes the config entry ID, unique ID, options, and redacted config-entry data. Entity IDs and
+the friendly name are redacted because they can reveal room names or local setup details.
 
-**Service data:**
+## Debug Logging
 
-| Parameter   | Type           | Required | Description                                      |
-| ----------- | -------------- | -------- | ------------------------------------------------ |
-| `entity_id` | string or list | No       | Target entity/entities (if omitted, targets all) |
-| `parameter` | string         | Yes      | Service-specific parameter                       |
-| `value`     | integer        | No       | Numeric value for the action                     |
-
-**Example:**
+Add this to `configuration.yaml`, then restart Home Assistant:
 
 ```yaml
-service: climate_ir_zhjt03.example_service
-target:
-  entity_id: switch.device_name_switch
-data:
-  parameter: "setting_name"
-  value: 42
+logger:
+  default: info
+  logs:
+    custom_components.climate_ir_zhjt03: debug
 ```
 
-### Using Services in Automations
+Useful log events include invalid restored values, ignored sensor states, unsupported units, transmitter availability
+changes, and unsupported climate values.
 
-```yaml
-automation:
-  - alias: "Call service at sunset"
-    trigger:
-      - trigger: sun
-        event: sunset
-    action:
-      - action: climate_ir_zhjt03.example_service
-        target:
-          entity_id: switch.device_name_switch
-        data:
-          parameter: "mode"
-          value: 1
-```
+## Troubleshooting
 
-## Advanced Configuration
+### Setup Form Does Not Open
 
-### Multiple Instances
+The integration requires at least one `infrared` emitter entity. Set up your IR transmitter integration first.
 
-You can add multiple instances of this integration for different devices:
+### Entity Is Unavailable
 
-1. Go to **Settings** → **Devices & Services**
-2. Click **+ Add Integration**
-3. Search for "Climate for IR Devices using ZH/JT-03 Remote"
-4. Configure with different connection details
+Check the configured infrared transmitter. The climate entity follows the transmitter's availability.
 
-Each instance creates separate entities with unique entity IDs.
+### AC Does Not Respond
 
-### Network Configuration
+1. Verify the transmitter can physically reach the AC.
+2. Confirm the AC uses the ZH/JT-03 protocol.
+3. Try `cool`, `24 C`, fan `auto`, swing `off`.
+4. Check Home Assistant logs for errors from the transmitter integration.
 
-If the device is on a different network or behind a firewall:
+### Current Temperature or Humidity Is Missing
 
-- Ensure ports are open (default: 8080)
-- Configure port forwarding if needed
-- Consider VPN for remote access
-- Some devices may require static IP addresses
-
-### Polling Behavior
-
-The integration uses polling to fetch updates:
-
-- **Minimum interval:** 30 seconds (prevents overloading the device)
-- **Recommended interval:** 5 minutes (default)
-- **Longer intervals:** Save resources but reduce responsiveness
-
-Adjust based on your needs:
-
-- Real-time monitoring: 30-60 seconds
-- Regular updates: 5 minutes
-- Slow-changing values: 15-30 minutes
-
-## Diagnostic Data
-
-The integration provides diagnostic data for troubleshooting:
-
-1. Go to **Settings** → **Devices & Services**
-2. Find "Climate for IR Devices using ZH/JT-03 Remote"
-3. Click on the device
-4. Click **Download Diagnostics**
-
-Diagnostic data includes:
-
-- Connection status
-- Last update timestamp
-- API response data
-- Entity states
-- Error history
-
-**Privacy note:** Diagnostic data may contain sensitive information. Review before sharing.
-
-## Blueprints
-
-The integration works with Home Assistant Blueprints for reusable automations:
-
-### Example Blueprint
-
-```yaml
-blueprint:
-  name: Climate for IR Devices using ZH/JT-03 Remote Alert
-  description: Send notification when sensor exceeds threshold
-  domain: automation
-  input:
-    sensor_entity:
-      name: Sensor
-      selector:
-        entity:
-          domain: sensor
-          integration: climate_ir_zhjt03
-    threshold:
-      name: Threshold
-      selector:
-        number:
-          min: 0
-          max: 100
-
-trigger:
-  - trigger: numeric_state
-    entity_id: !input sensor_entity
-    above: !input threshold
-
-action:
-  - action: notify.notify
-    data:
-      message: "Sensor exceeded threshold!"
-```
-
-## Configuration Examples
-
-See [EXAMPLES.md](./EXAMPLES.md) for complete automation and dashboard examples.
-
-## Troubleshooting Configuration
-
-### Config Entry Fails to Load
-
-If the integration fails to load after configuration:
-
-1. Check Home Assistant logs for errors
-2. Verify connection details are correct
-3. Test connectivity from Home Assistant to the device
-4. Try removing and re-adding the integration
-
-### Options Don't Save
-
-If configuration changes aren't persisted:
-
-1. Check for validation errors in the UI
-2. Ensure values are within allowed ranges
-3. Review logs for detailed error messages
-4. Try restarting Home Assistant
+Confirm the optional sensor entity still exists and has a numeric state. For temperature, check that the unit is a Home
+Assistant-supported temperature unit.
 
 ## Related Documentation
 
-- [Getting Started](./GETTING_STARTED.md) - Installation and initial setup
-- [Examples](./EXAMPLES.md) - Automation and dashboard examples
-- [GitHub Issues](https://github.com/liads/ha-climate-zh-jt-03/issues) - Report problems
+- [Getting Started](./GETTING_STARTED.md)
+- [Examples](./EXAMPLES.md)
+- [GitHub Issues](https://github.com/liads/ha-climate-zh-jt-03/issues)
