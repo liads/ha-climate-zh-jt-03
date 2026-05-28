@@ -143,13 +143,13 @@ script/test
 
 The repository keeps agent instructions separate from user/developer documentation:
 
-| File | Purpose |
-| ---- | ------- |
-| `AGENTS.md` | Primary instructions for AI coding agents. |
-| `.github/copilot-instructions.md` | Compact GitHub Copilot entry point. |
-| `CLAUDE.md` and `GEMINI.md` | Pointers for other agent tools. |
-| `.github/instructions/*.instructions.md` | Path-specific style guidance. |
-| `.github/prompts/*.prompt.md` | Optional prompt templates for maintainers. |
+| File                                     | Purpose                                    |
+| ---------------------------------------- | ------------------------------------------ |
+| `AGENTS.md`                              | Primary instructions for AI coding agents. |
+| `.github/copilot-instructions.md`        | Compact GitHub Copilot entry point.        |
+| `CLAUDE.md` and `GEMINI.md`              | Pointers for other agent tools.            |
+| `.github/instructions/*.instructions.md` | Path-specific style guidance.              |
+| `.github/prompts/*.prompt.md`            | Optional prompt templates for maintainers. |
 
 Some path-specific instruction files describe broader Home Assistant blueprint patterns, including coordinators and API
 clients. Those patterns are optional here; the runtime architecture documented in this file is authoritative.
