@@ -106,6 +106,25 @@ class ConfigFlow:
         """Record that duplicate prevention was invoked."""
         self.duplicate_check_called = True
 
+    def _abort_if_unique_id_mismatch(self) -> None:
+        """Record that unique ID mismatch prevention was invoked."""
+        self.unique_id_mismatch_check_called = True
+        if self.unique_id != self.reconfigure_entry.unique_id:
+            raise HomeAssistantError("unique ID mismatch")
+
+    def _get_reconfigure_entry(self):
+        """Return the entry under reconfiguration."""
+        return self.reconfigure_entry
+
+    def add_suggested_values_to_schema(self, schema: Schema, suggested_values: dict[str, Any]) -> Schema:
+        """Add defaults to schema markers."""
+        return Schema(
+            {
+                type(marker)(marker.schema, suggested_values.get(marker.schema, marker.default)): value
+                for marker, value in schema.schema.items()
+            },
+        )
+
     def async_abort(self, *, reason: str) -> dict[str, Any]:
         """Return an abort result."""
         return {"type": "abort", "reason": reason}
@@ -118,9 +137,38 @@ class ConfigFlow:
         """Return a create entry result."""
         return {"type": "create_entry", **kwargs}
 
+    def async_update_reload_and_abort(self, entry, **kwargs: Any) -> dict[str, Any]:
+        """Update an entry, schedule reload, and return an abort result."""
+        self.updated_entry = entry
+        if (title := kwargs.get("title")) is not None:
+            entry.title = title
+        if (data := kwargs.get("data")) is not None:
+            entry.data = data
+        elif (data_updates := kwargs.get("data_updates")) is not None:
+            entry.data = entry.data | data_updates
+        self.hass.config_entries.async_schedule_reload(entry.entry_id)
+        return self.async_abort(reason=kwargs.get("reason", "reconfigure_successful"))
+
 
 class ConfigEntry:
     """Tiny config entry stub."""
+
+
+class ConfigEntries:
+    """Tiny config entries manager stub."""
+
+    def __init__(self, entries: list[Any] | None = None) -> None:
+        """Initialize the config entries manager."""
+        self.entries = entries or []
+        self.reloads: list[str] = []
+
+    def async_entries(self, domain: str) -> list[Any]:
+        """Return config entries for a domain."""
+        return self.entries
+
+    def async_schedule_reload(self, entry_id: str) -> None:
+        """Record a scheduled reload."""
+        self.reloads.append(entry_id)
 
 
 class DeviceInfo(dict):
