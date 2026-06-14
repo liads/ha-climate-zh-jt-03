@@ -80,6 +80,11 @@ script/hooks/
 # Both are user-owned; upstream changes would silently revert your pin or docs.
 .devcontainer/.env
 
+# DevContainer initialization hook/state is removed by initialize.sh.
+# Keep these project-owned so template sync does not reintroduce postAttachCommand.
+.devcontainer/devcontainer.json
+.devcontainer/post-attach.sh
+
 # ── Release management ───────────────────────────────────────
 # Release Please configuration is project-specific
 release-please-config.json
