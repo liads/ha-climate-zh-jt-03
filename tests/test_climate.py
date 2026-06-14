@@ -134,6 +134,21 @@ def test_power_sensor_updates_assumed_mode(climate) -> None:
     assert entity._last_sent_hvac_mode == climate.DEFAULT_HVAC_MODE
 
 
+def test_unknown_infrared_emitter_state_is_available(climate) -> None:
+    """An infrared emitter can send commands before its first command timestamp."""
+    entity = _entity(climate)
+
+    entity._async_infrared_emitter_changed(_event(_state(climate.STATE_UNKNOWN)))
+
+    assert entity._attr_available is True
+    assert entity.write_count == 1
+
+    entity._async_infrared_emitter_changed(_event(_state(climate.STATE_UNAVAILABLE)))
+
+    assert entity._attr_available is False
+    assert entity.write_count == 2
+
+
 def test_setters_defer_to_apply_state_or_update_offline_preferences(climate) -> None:
     """Setter methods either send state or store offline preferences."""
     entity = _entity(climate)
