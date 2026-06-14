@@ -4,7 +4,7 @@ applyTo: "**/manifest.json"
 
 # Manifest Instructions
 
-**Applies to:** `custom_components/climate_ir_zhjt03/manifest.json`
+**Applies to:** `custom_components/<your_domain>/manifest.json`
 
 ## Schema Validation
 
@@ -16,14 +16,14 @@ This schema combines Home Assistant's official manifest requirements with HACS-s
 
 ```json
 {
-  "domain": "climate_ir_zhjt03",
-  "name": "Climate for IR Devices using ZH/JT-03 Remote",
-  "codeowners": ["@liads"],
+  "domain": "your_domain",
+  "name": "Your Integration Title",
+  "codeowners": ["@your_github_username"],
   "config_flow": true,
-  "documentation": "https://github.com/liads/ha-climate-zh-jt-03",
+  "documentation": "https://github.com/your_org/your_repo",
   "integration_type": "device",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/liads/ha-climate-zh-jt-03/issues",
+  "issue_tracker": "https://github.com/your_org/your_repo/issues",
   "requirements": [],
   "version": "0.0.0"
 }
@@ -82,7 +82,7 @@ GitHub usernames with `@` prefix:
 
 ```json
 "codeowners": [
-  "@liads"
+  "@jpawlowski"
 ]
 ```
 

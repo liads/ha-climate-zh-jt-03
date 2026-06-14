@@ -4,5 +4,8 @@ config/
 custom_components/
 !custom_components/climate_ir_zhjt03/
 
+# Auto-generated release files
+CHANGELOG.md
+
 # Ignore-style files (no recognized extension — Prettier would misparse them)
 *ignore

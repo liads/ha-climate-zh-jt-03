@@ -121,8 +121,8 @@ If not provided, ask for:
 
 **Related Files:**
 
-- English: [#file:custom_components/climate_ir_zhjt03/translations/en.json]
-- German: [#file:custom_components/climate_ir_zhjt03/translations/de.json]
+- English: [#file:custom_components/{domain}/translations/en.json]
+- German: [#file:custom_components/{domain}/translations/de.json]
 - Schema: [#file:schemas/json/translation_schema.json]
 - Documentation: Reference [#file:.github/instructions/translations.instructions.md]
 
