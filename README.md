@@ -15,7 +15,7 @@ inside Home Assistant.
 
 - UI setup through Home Assistant's config flow.
 - One climate entity per configured infrared transmitter.
-- ZH/JT-03 command encoding for Chigo-compatible AC units.
+- Command encoding for ZH/JT-03-compatible AC units.
 - HVAC modes: off, auto, cool, heat, fan only, and dry.
 - Target temperature range: 16-32 C in whole-degree steps.
 - Fan modes: auto, low, medium, and high.
@@ -34,6 +34,21 @@ inside Home Assistant.
 
 This integration is `assumed_state`: most IR remotes do not receive feedback from the AC. Home Assistant assumes the
 last command succeeded unless you provide optional feedback sensors.
+
+## Known Compatibility
+
+Brand names are not a guarantee. To check support, compare your original remote with `ZH/JT-03` /
+`ZHJT03` replacement remotes or test whether your AC responds to this protocol.
+
+**Reported or better-sourced compatibility:** Family, Pilot, Chigo, Ecox, ACSON, Goodweather. Sources include
+[Dealema][dealema-zhjt03-family], [Smartclima][smartclima-chigo-zhjt03], [Ozremote][ozremote-chigo-zhjt03],
+[Ecoxline][ecoxline-zhjt03], [Remote Control World][remote-control-world-acson-zhjt03], and
+[IRremoteESP8266][irremote-supported-protocols] / [issue #697][irremote-goodweather-issue].
+
+**Possible unverified compatibility from marketplace listings:** Mando, GE, Beko, Lennox, Soprano, Prime, Dantex,
+Elekta, Teslas, SVAN. These claims come from marketplace remote listings, including
+[Amazon.com][amazon-zhjt03-marketplace] and [AliExpress][aliexpress-zhjt03-marketplace], and may vary by AC model or
+region.
 
 ## Installation
 
@@ -173,10 +188,19 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 [commits-shield]: https://img.shields.io/github/commit-activity/y/liads/ha-climate-zh-jt-03.svg?style=for-the-badge
 [commits]: https://github.com/liads/ha-climate-zh-jt-03/commits/main
+[aliexpress-zhjt03-marketplace]: https://www.aliexpress.com/item/1005004236929351.html
+[amazon-zhjt03-marketplace]: https://www.amazon.com/Control-EVERWELL-CLIMATIC-Blomberg-Conditioner/dp/B0BF942YZX
+[dealema-zhjt03-family]: https://dealema.co.il/product/%D7%A9%D7%9C%D7%98-%D7%A8%D7%97%D7%95%D7%A7-%D7%90%D7%95%D7%A0%D7%99%D7%91%D7%A8%D7%A1%D7%9C%D7%99-%D7%9C%D7%9E%D7%96%D7%92%D7%A0%D7%99%D7%9D-zh-jt-03-family/
+[ecoxline-zhjt03]: https://ecoxline.com/en/ecox-split-air-conditioner-parts/remote-control-for-split-ecox-zhjt-03/205.html
 [hacs]: https://github.com/hacs/integration
 [hacsbadge]: https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge
+[irremote-goodweather-issue]: https://github.com/crankyoldgit/IRremoteESP8266/issues/697
+[irremote-supported-protocols]: https://github.com/crankyoldgit/IRremoteESP8266/blob/master/SupportedProtocols.md
 [license-shield]: https://img.shields.io/github/license/liads/ha-climate-zh-jt-03.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/maintainer-%40liads-blue.svg?style=for-the-badge
+[ozremote-chigo-zhjt03]: https://www.ozremote.com/products/zh-jt-03-remote-control-replacement-for-chigo-air-conditioner
 [releases-shield]: https://img.shields.io/github/release/liads/ha-climate-zh-jt-03.svg?style=for-the-badge
 [releases]: https://github.com/liads/ha-climate-zh-jt-03/releases
+[remote-control-world-acson-zhjt03]: https://www.remote-control-world.eu/air-conditioning-c-261/acson-zhjt-03-replacement-remote-control-p-85177
+[smartclima-chigo-zhjt03]: https://www.smartclima.com/chigo-air-conditioner-remote-controller-zh-jt-01-zh-jt-03.htm
 [user_profile]: https://github.com/liads
